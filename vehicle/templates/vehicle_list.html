@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Vehicles{% endblock %}
+{% block content %}
+<h2 style="color:var(--accent);font-family:'Orbitron';">Your Vehicles</h2>
+<div class="card">
+  <table>
+    <tr><th>Model</th><th>Plate</th><th>Actions</th></tr>
+    {% for v in vehicles %}
+    <tr>
+      <td>{{ v.model }}</td>
+      <td>{{ v.plate_number }}</td>
+      <td>
+        <a href="{% url 'edit_vehicle' v.id %}" class="btn btn-outline">Edit</a>
+        <a href="{% url 'delete_vehicle' v.id %}" class="btn btn-outline">Delete</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">No vehicles found.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

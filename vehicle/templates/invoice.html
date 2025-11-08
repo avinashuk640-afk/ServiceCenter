@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Invoice{% endblock %}
+{% block content %}
+<div class="card" style="max-width:700px;margin:auto;">
+  <h2 style="color:var(--accent);font-family:'Orbitron';">Invoice</h2>
+  <p><strong>Customer:</strong> {{ invoice.booking.customer.name }}</p>
+  <p><strong>Vehicle:</strong> {{ invoice.booking.vehicle.model }}</p>
+  <p><strong>Service Type:</strong> {{ invoice.booking.service_type }}</p>
+  <p><strong>Total:</strong> ₹ {{ invoice.total_amount }}</p>
+  <p><strong>Date:</strong> {{ invoice.date }}</p>
+  <button onclick="window.print()" class="btn btn-outline">Print</button>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Service Center Dashboard{% endblock %}
+{% block content %}
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --accent: #dde512;
+    --text: #f2f2f2;
+  }
+  body { background-color: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; }
+  .dash-container {
+    max-width: 1000px;
+    margin: 60px auto;
+    background: rgba(25,25,25,0.9);
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 0 25px var(--accent);
+    animation: fadeIn 1s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  h2 {
+    text-align: center;
+    color: var(--accent);
+    font-family: 'Orbitron', sans-serif;
+    margin-bottom: 20px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+  th, td {
+    border: 1px solid var(--accent);
+    padding: 10px;
+    text-align: center;
+  }
+  th {
+    background-color: rgba(221,229,18,0.2);
+    color: var(--accent);
+  }
+  .btn {
+    background: var(--accent);
+    color: #000;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .btn:hover {
+    box-shadow: 0 0 10px var(--accent);
+  }
+</style>
+
+<div class="dash-container">
+  <h2>{{ service_center.name }} Dashboard</h2>
+  <p><strong>Email:</strong> {{ service_center.email }} | <strong>Phone:</strong> {{ service_center.phone }}</p>
+  <hr>
+  <h3>Recent Service Requests</h3>
+  {% if bookings %}
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Customer</th>
+      <th>Vehicle</th>
+      <th>Booking Date</th>
+      <th>Scheduled Date</th>
+      <th>Status</th>
+    </tr>
+    {% for booking in bookings %}
+    <tr>
+      <td>{{ booking.id }}</td>
+      <td>{{ booking.customer.name }}</td>
+      <td>{{ booking.vehicle.vehicle_number }} ({{ booking.vehicle.model }})</td>
+      <td>{{ booking.booking_date|date:"d M Y H:i" }}</td>
+      <td>{{ booking.scheduled_date|date:"d M Y" }}</td>
+      <td>{{ booking.status }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>No service requests yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
