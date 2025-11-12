@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-<h3>Generate Invoice for {{ booking.vehicle.vehicle_number }}</h3>
+<h3>Vehicle Form</h3>
 <form method="POST">
   {% csrf_token %}
   {{ form.as_p }}
-  <button class="btn btn-success">Save Invoice</button>
+  <button class="btn btn-primary">Save</button>
 </form>
 {% endblock %}

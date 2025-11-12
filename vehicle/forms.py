@@ -1,23 +1,16 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import (
-    ServiceCenter,
-    Customer,
-    Vehicle,
-    Staff,
-    ServiceBooking,
-    JobAssignment,
-    ServiceStatus,
-    Invoice,
-    ServiceHistory,
-    ReminderOffer
-)
+from datetime import date
 
+from .models import (
+    ServiceCenter, Customer, Vehicle, Staff,
+    ServiceBooking, JobAssignment, ServiceStatus,
+    Invoice, ServiceHistory, ReminderOffer
+)
 
 # ---------------------------
 # 1. User Registration Forms
 # ---------------------------
-
 class UserRegisterForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
     confirm_password = forms.CharField(widget=forms.PasswordInput)
@@ -49,89 +42,96 @@ class ServiceCenterForm(forms.ModelForm):
         widgets = {"address": forms.Textarea(attrs={"rows": 2})}
 
 # ---------------------------
-# 2. Vehicle Form
+# 2. Vehicle Form (customer field removed)
 # ---------------------------
-
 class VehicleForm(forms.ModelForm):
     class Meta:
         model = Vehicle
-        fields = [
-            'customer', 'vehicle_number', 'model',
-            'manufacturer', 'year', 'fuel_type'
-        ]
+        fields = ['vehicle_number', 'model', 'manufacturer', 'year', 'fuel_type']
 
 
 # ---------------------------
-# 3. Staff Form
+# 3. Staff Form (service_center set server-side)
 # ---------------------------
-
 class StaffForm(forms.ModelForm):
     class Meta:
         model = Staff
-        fields = ['service_center', 'name', 'role', 'phone', 'email']
+        fields = ['name', 'role', 'phone', 'email']
 
 
 # ---------------------------
-# 4. Service Booking Form
+# 4. Service Booking Form (customer set server-side, validate scheduled_date)
 # ---------------------------
-
 class ServiceBookingForm(forms.ModelForm):
     class Meta:
         model = ServiceBooking
-        fields = [
-            'customer', 'vehicle', 'service_center',
-            'scheduled_date', 'description', 'status'
-        ]
+        fields = ['vehicle', 'service_center', 'scheduled_date', 'description']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
             'scheduled_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user and hasattr(user, 'customer'):
+            self.fields['vehicle'].queryset = Vehicle.objects.filter(customer=user.customer)
+        else:
+            self.fields['vehicle'].queryset = Vehicle.objects.none()
+
+    def clean_scheduled_date(self):
+        sd = self.cleaned_data.get('scheduled_date')
+        if sd and sd < date.today():
+            raise forms.ValidationError("Scheduled date cannot be in the past.")
+        return sd
+
 
 # ---------------------------
-# 5. Job Assignment Form
+# 5. Job Assignment Form (staff queryset limited by booking passed from view)
 # ---------------------------
-
 class JobAssignmentForm(forms.ModelForm):
     class Meta:
         model = JobAssignment
-        fields = ['booking', 'staff', 'notes']
+        fields = ['staff', 'notes']
         widgets = {
             'notes': forms.Textarea(attrs={'rows': 2}),
         }
+
+    def __init__(self, *args, booking=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if booking:
+            self.fields['staff'].queryset = Staff.objects.filter(service_center=booking.service_center)
+        else:
+            self.fields['staff'].queryset = Staff.objects.none()
 
 
 # ---------------------------
 # 6. Service Status Form
 # ---------------------------
-
 class ServiceStatusForm(forms.ModelForm):
     class Meta:
         model = ServiceStatus
-        fields = ['booking', 'current_status', 'remarks']
+        fields = ['current_status', 'remarks']
         widgets = {
             'remarks': forms.Textarea(attrs={'rows': 2}),
         }
 
 
 # ---------------------------
-# 7. Invoice Form
+# 7. Invoice Form (booking/service_center assigned server-side)
 # ---------------------------
-
 class InvoiceForm(forms.ModelForm):
     class Meta:
         model = Invoice
-        fields = ['booking', 'service_center', 'total_amount', 'payment_status']
+        fields = ['total_amount', 'payment_status']
 
 
 # ---------------------------
 # 8. Service History Form
 # ---------------------------
-
 class ServiceHistoryForm(forms.ModelForm):
     class Meta:
         model = ServiceHistory
-        fields = ['customer', 'vehicle', 'booking', 'service_date', 'details', 'cost']
+        fields = ['vehicle', 'booking', 'service_date', 'details', 'cost']
         widgets = {
             'service_date': forms.DateInput(attrs={'type': 'date'}),
             'details': forms.Textarea(attrs={'rows': 3}),
@@ -141,11 +141,10 @@ class ServiceHistoryForm(forms.ModelForm):
 # ---------------------------
 # 9. Reminder / Offer Form
 # ---------------------------
-
 class ReminderOfferForm(forms.ModelForm):
     class Meta:
         model = ReminderOffer
-        fields = ['service_center', 'customer', 'title', 'message']
+        fields = ['customer', 'title', 'message']
         widgets = {
             'message': forms.Textarea(attrs={'rows': 3}),
         }

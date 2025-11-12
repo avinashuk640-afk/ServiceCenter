@@ -1,15 +1,11 @@
-{% extends "base.html" %}
-{% block title %}Service Center Registration{% endblock %}
-
+{% extends 'base.html' %}
+{% block title %}Register Service Center{% endblock %}
 {% block content %}
-<div class="form-container">
-  <h2>Service Center Registration</h2>
-  <form method="POST">
-    {% csrf_token %}
-    {{ user_form.as_p }}
-    {{ servicecenter_form.as_p }}
-    <button type="submit">Register as Service Center</button>
-  </form>
-  <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
-</div>
+<h3>Register as Service Center</h3>
+<form method="POST">
+  {% csrf_token %}
+  {{ user_form.as_p }}
+  {{ servicecenter_form.as_p }}
+  <button class="btn btn-warning">Register</button>
+</form>
 {% endblock %}

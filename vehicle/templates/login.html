@@ -1,115 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}Login{% endblock %}
 {% block content %}
-
-<style>
-  :root {
-    --bg: #0d0d0d;
-    --accent: #dde512;
-    --text: #f2f2f2;
-  }
-
-  body {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: 'Poppins', sans-serif;
-  }
-
-  .login-container {
-    max-width: 400px;
-    margin: 80px auto;
-    background: rgba(20, 20, 20, 0.8);
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 0 20px var(--accent);
-    animation: glowIn 1.5s ease-in-out;
-    text-align: center;
-  }
-
-  @keyframes glowIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-
-  h2 {
-    color: var(--accent);
-    font-family: 'Orbitron', sans-serif;
-    margin-bottom: 20px;
-  }
-
-  label {
-    color: var(--accent);
-    display: block;
-    margin-bottom: 6px;
-    text-align: left;
-  }
-
-  input[type="text"], input[type="password"] {
-    background: #111;
-    color: var(--text);
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    padding: 8px;
-    width: 100%;
-    margin-bottom: 15px;
-    font-size: 15px;
-  }
-
-  .btn {
-    background: var(--accent);
-    color: #000;
-    border: none;
-    padding: 10px 18px;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
-    width: 100%;
-  }
-
-  .btn:hover {
-    box-shadow: 0 0 15px var(--accent);
-    transform: scale(1.05);
-  }
-
-  .muted {
-    color: #aaa;
-    font-size: 14px;
-  }
-
-  .muted a {
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .muted a:hover {
-    text-shadow: 0 0 10px var(--accent);
-  }
-</style>
-
-<div class="login-container">
-  <h2>LOGIN</h2>
-  <form method="POST">
-    {% csrf_token %}
-    <div class="form-group">
-      <label for="username">Username</label>
-      <input type="text" name="username" id="username" required>
-    </div>
-
-    <div class="form-group">
-      <label for="password">Password</label>
-      <input type="password" name="password" id="password" required>
-    </div>
-
-    <button type="submit" class="btn">Login</button>
-  </form>
-
-  <p class="muted" style="margin-top:15px;">
-    Don't have an account?
-    <a href="{% url 'register_customer' %}">Customer Register</a>
-     <a href="{% url 'register_servicecenter' %}">service Register</a>
-  </p>
-</div>
-
+<h3>Login</h3>
+<form method="POST">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label>Username</label>
+    <input type="text" name="username" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label>Password</label>
+    <input type="password" name="password" class="form-control">
+  </div>
+  <button type="submit" class="btn btn-primary">Login</button>
+</form>
 {% endblock %}

@@ -1,16 +1,11 @@
-{% extends "base.html" %}
-{% block title %}Customer Registration{% endblock %}
-
+{% extends 'base.html' %}
+{% block title %}Register Customer{% endblock %}
 {% block content %}
-<div class="form-container">
-  <h2>Customer Registration</h2>
-  <form method="POST">
-    {% csrf_token %}
-    {{ user_form.as_p }}
-    {{ customer_form.as_p }}
-    <button type="submit">Register as Customer</button>
-  </form>
-  <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
-</div>
+<h3>Register as Customer</h3>
+<form method="POST">
+  {% csrf_token %}
+  {{ user_form.as_p }}
+  {{ customer_form.as_p }}
+  <button class="btn btn-success">Register</button>
+</form>
 {% endblock %}
-  

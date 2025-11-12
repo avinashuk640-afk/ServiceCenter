@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
 # ---------------------------
 # 1. Service Center Model
 # ---------------------------
@@ -99,11 +98,12 @@ class JobAssignment(models.Model):
 
 
 # ---------------------------
-# 7. Service Status Model
+# 7. ServiceStatus (history) Model
+#    — changed to allow multiple status entries per booking
 # ---------------------------
 class ServiceStatus(models.Model):
-    booking = models.OneToOneField(ServiceBooking, on_delete=models.CASCADE)
-    updated_on = models.DateTimeField(auto_now=True)
+    booking = models.ForeignKey(ServiceBooking, on_delete=models.CASCADE, related_name='statuses')
+    updated_on = models.DateTimeField(auto_now_add=True)
     current_status = models.CharField(max_length=50)
     remarks = models.TextField(blank=True, null=True)
 
@@ -130,10 +130,11 @@ class Invoice(models.Model):
 
 
 # ---------------------------
-# 9. Service History Model
+# 9. Service History Model (fixed: add service_center)
 # ---------------------------
 class ServiceHistory(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    service_center = models.ForeignKey(ServiceCenter, on_delete=models.SET_NULL, null=True, blank=True)
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
     booking = models.ForeignKey(ServiceBooking, on_delete=models.CASCADE)
     service_date = models.DateField()

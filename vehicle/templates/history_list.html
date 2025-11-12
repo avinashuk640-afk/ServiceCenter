@@ -1,20 +1,24 @@
 {% extends 'base.html' %}
-{% block title %}Service History{% endblock %}
 {% block content %}
-<h2 style="color:var(--accent);font-family:'Orbitron';">Service History</h2>
-<div class="card">
-  <table>
-    <tr><th>Vehicle</th><th>Service</th><th>Date</th><th>Notes</th></tr>
-    {% for h in histories %}
-    <tr>
-      <td>{{ h.vehicle.model }}</td>
-      <td>{{ h.service_type }}</td>
-      <td>{{ h.date }}</td>
-      <td>{{ h.notes }}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="4">No history available.</td></tr>
-    {% endfor %}
-  </table>
-</div>
+<h3>Service History</h3>
+<table class="table table-bordered">
+  <tr>
+    <th>Vehicle</th>
+    <th>Date</th>
+    <th>Details</th>
+    <th>Cost</th>
+  </tr>
+  {% for h in histories %}
+  <tr>
+    <td>{{ h.vehicle.vehicle_number }}</td>
+    <td>{{ h.service_date }}</td>
+    <td>{{ h.details }}</td>
+    <td>{{ h.cost }}</td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="4" class="text-center">No history found.</td>
+  </tr>
+  {% endfor %}
+</table>
 {% endblock %}

@@ -1,82 +1,28 @@
 {% extends 'base.html' %}
-{% block title %}Customer Dashboard{% endblock %}
 {% block content %}
-<style>
-  :root {
-    --bg: #0d0d0d;
-    --accent: #dde512;
-    --text: #f2f2f2;
-  }
-  body { background-color: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; }
-  .dash-container {
-    max-width: 900px;
-    margin: 60px auto;
-    background: rgba(25,25,25,0.9);
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 0 25px var(--accent);
-    animation: fadeIn 1s ease-in-out;
-  }
-  h2 {
-    text-align: center;
-    color: var(--accent);
-    font-family: 'Orbitron', sans-serif;
-    margin-bottom: 20px;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px; 
-  }
-  th, td {
-    border: 1px solid var(--accent);
-    padding: 10px;
-    text-align: center;
-  }
-  th {
-    background-color: rgba(221,229,18,0.2);
-    color: var(--accent);
-  }
-  .btn {
-    background: var(--accent);
-    color: #000;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
-  }
-  .btn:hover {
-    box-shadow: 0 0 10px var(--accent);
-  }
-</style>
+<h3>Customer Dashboard</h3>
+<a href="{% url 'add_vehicle' %}" class="btn btn-sm btn-primary">Add Vehicle</a>
+<a href="{% url 'booking_service' %}" class="btn btn-sm btn-success">Book Service</a>
 
-<div class="dash-container">
-  <h2>Welcome, {{ customer.name }}</h2>
-  <p><strong>Email:</strong> {{ customer.email }} | <strong>Phone:</strong> {{ customer.phone }}</p>
-  <hr>
-  <h3>Your Service Bookings</h3>
-  {% if bookings %}
-  <table>
-    <tr>
-      <th>ID</th>
-      <th>Vehicle</th>
-      <th>Date</th>
-      <th>Status</th>
-    </tr>
-    {% for booking in bookings %}
-    <tr>
-      <td>{{ booking.id }}</td>
-      <td>{{ booking.vehicle }}</td>
-      <td>{{ booking.date }}</td>
-      <td>{{ booking.status }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% else %}
-  <p>No bookings yet.</p>
-  {% endif %}
-  <br>
-  <a href="{% url 'booking_service' %}" class="btn">Book New Service</a>
-</div>
+<h4 class="mt-4">Your Bookings</h4>
+<table class="table table-bordered">
+  <tr>
+    <th>Vehicle</th>
+    <th>Date</th>
+    <th>Status</th>
+    <th>Service Center</th>
+  </tr>
+  {% for b in bookings %}
+  <tr>
+    <td>{{ b.vehicle.vehicle_number }}</td>
+    <td>{{ b.scheduled_date }}</td>
+    <td>{{ b.status }}</td>
+    <td>{{ b.service_center.name }}</td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="4" class="text-center">No bookings yet.</td>
+  </tr>
+  {% endfor %}
+</table>
 {% endblock %}

@@ -3,6 +3,9 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.http import HttpResponseForbidden
+from django.db import transaction
+from functools import wraps
 
 from .models import (
     ServiceCenter, Customer, Vehicle, Staff,
@@ -16,13 +19,26 @@ from .forms import (
     ServiceHistoryForm, ReminderOfferForm
 )
 
-# ------------------------------------------------------------
-# 🧩 1. AUTHENTICATION VIEWS
-# ------------------------------------------------------------
 
+# ---------------------------
+# Helper decorator: require servicecenter user
+# ---------------------------
+def require_servicecenter(view_func):
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not hasattr(request.user, 'servicecenter'):
+            messages.error(request, "Access denied.")
+            return redirect('login')
+        return view_func(request, *args, **kwargs)
+    return _wrapped
+
+
+# ------------------------------------------------------------
+# 1. AUTHENTICATION VIEWS
+# ------------------------------------------------------------
 def home(request):
-    """Landing Page"""
     return render(request, "home.html")
+
 
 def register_customer(request):
     if request.method == "POST":
@@ -79,7 +95,6 @@ def register_servicecenter(request):
 
 
 def login_view(request):
-    """Login for all users with role-based redirection"""
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
@@ -90,77 +105,64 @@ def login_view(request):
 
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            print(user)
             login(request, user)
             messages.success(request, f"Welcome, {user.username}!")
 
-            # 🔹 Redirect based on user role
             if hasattr(user, "customer"):
                 return redirect("customer_dashboard")
             elif hasattr(user, "servicecenter"):
                 return redirect("servicecenter_dashboard")
             else:
-                # fallback if neither role (e.g., admin)
-                return redirect("login")
+                return redirect("home")
         else:
             messages.error(request, "Invalid username or password.")
 
     return render(request, "login.html")
-    
+
 
 @login_required
 def logout_view(request):
-    """Logout the current user"""
     logout(request)
     messages.info(request, "Logged out successfully.")
     return redirect("login")
 
 
 # ------------------------------------------------------------
-# 🏠 2. DASHBOARD
+# 2. DASHBOARDS
 # ------------------------------------------------------------
-
 @login_required
 def customer_dashboard(request):
-    """Dashboard for Customers"""
-    customer = request.user.customer  # linked via OneToOneField
+    if not hasattr(request.user, "customer"):
+        messages.error(request, "Access denied.")
+        return redirect("home")
 
-    # ✅ Use 'booking_date' instead of 'date'
+    customer = request.user.customer
     bookings = ServiceBooking.objects.filter(customer=customer).order_by('-booking_date')
+    vehicles = Vehicle.objects.filter(customer=customer)
 
-    context = {
-        "customer": customer,
-        "bookings": bookings,
-    }
+    context = {"customer": customer, "bookings": bookings, "vehicles": vehicles}
     return render(request, "customer_dashboard.html", context)
 
 
-
 @login_required
+@require_servicecenter
 def servicecenter_dashboard(request):
-    """Dashboard for Service Centers"""
-    try:
-        service_center = request.user.servicecenter
-    except ServiceCenter.DoesNotExist:
-        messages.error(request, "Service Center profile not found.")
-        return redirect("dashboard")
-
+    service_center = request.user.servicecenter
     bookings = ServiceBooking.objects.filter(service_center=service_center).order_by('-booking_date')
-
-    context = {
-        "service_center": service_center,
-        "bookings": bookings,
-    }
+    staff = Staff.objects.filter(service_center=service_center)
+    context = {"service_center": service_center, "bookings": bookings, "staff": staff}
     return render(request, "servicecenter_dashboard.html", context)
 
 
-
 # ------------------------------------------------------------
-# 🚗 3. VEHICLE MANAGEMENT (Customer)
+# 3. VEHICLE MANAGEMENT (Customer)
 # ------------------------------------------------------------
-
 @login_required
 def add_vehicle(request):
+    if not hasattr(request.user, 'customer'):
+        messages.error(request, "Only customers can add vehicles.")
+        return redirect('home')
+
     if request.method == "POST":
         form = VehicleForm(request.POST)
         if form.is_valid():
@@ -198,19 +200,24 @@ def delete_vehicle(request, pk):
 
 @login_required
 def view_vehicle(request):
-    """List all vehicles of the logged-in customer"""
+    if not hasattr(request.user, 'customer'):
+        messages.error(request, "Access denied.")
+        return redirect('home')
     vehicles = Vehicle.objects.filter(customer=request.user.customer)
     return render(request, "vehicle_list.html", {"vehicles": vehicles})
 
 
 # ------------------------------------------------------------
-# 🧰 4. SERVICE BOOKING (Customer)
+# 4. SERVICE BOOKING (Customer)
 # ------------------------------------------------------------
-
 @login_required
 def booking_service(request):
+    if not hasattr(request.user, 'customer'):
+        messages.error(request, "Only customers can book services.")
+        return redirect('home')
+
     if request.method == "POST":
-        form = ServiceBookingForm(request.POST)
+        form = ServiceBookingForm(request.POST, user=request.user)
         if form.is_valid():
             booking = form.save(commit=False)
             booking.customer = request.user.customer
@@ -219,13 +226,12 @@ def booking_service(request):
             messages.success(request, "Service booked successfully.")
             return redirect("view_bookings")
     else:
-        form = ServiceBookingForm()
+        form = ServiceBookingForm(user=request.user)
     return render(request, "booking_service.html", {"form": form})
 
 
 @login_required
 def view_bookings(request):
-    """Customer or Service Center can view their bookings"""
     if hasattr(request.user, "customer"):
         bookings = ServiceBooking.objects.filter(customer=request.user.customer)
     elif hasattr(request.user, "servicecenter"):
@@ -236,14 +242,32 @@ def view_bookings(request):
 
 
 # ------------------------------------------------------------
-# 🧑‍🔧 5. SERVICE CENTER OPERATIONS
+# 5. SERVICE CENTER OPERATIONS
 # ------------------------------------------------------------
+@login_required
+@require_servicecenter
+def add_staff(request):
+    if request.method == "POST":
+        form = StaffForm(request.POST)
+        if form.is_valid():
+            staff = form.save(commit=False)
+            staff.service_center = request.user.servicecenter
+            staff.save()
+            messages.success(request, "Staff added successfully.")
+            return redirect("servicecenter_dashboard")
+    else:
+        form = StaffForm()
+    return render(request, "staff_form.html", {"form": form})
+
 
 @login_required
+@require_servicecenter
 def assign_job(request, booking_id):
     booking = get_object_or_404(ServiceBooking, id=booking_id)
+    if booking.service_center != request.user.servicecenter:
+        return HttpResponseForbidden("Not your booking.")
     if request.method == "POST":
-        form = JobAssignmentForm(request.POST)
+        form = JobAssignmentForm(request.POST, booking=booking)
         if form.is_valid():
             job = form.save(commit=False)
             job.booking = booking
@@ -251,96 +275,90 @@ def assign_job(request, booking_id):
             messages.success(request, "Job assigned successfully.")
             return redirect("view_bookings")
     else:
-        form = JobAssignmentForm(initial={"booking": booking})
-    return render(request, "assign_job.html", {"form": form})
+        form = JobAssignmentForm(booking=booking)
+    return render(request, "assign_job.html", {"form": form, "booking": booking})
 
 
 @login_required
+@require_servicecenter
 def update_booking_status(request, pk):
     booking = get_object_or_404(ServiceBooking, id=pk)
+    if booking.service_center != request.user.servicecenter:
+        return HttpResponseForbidden("Not your booking.")
     if request.method == "POST":
         form = ServiceStatusForm(request.POST)
         if form.is_valid():
-            status = form.save(commit=False)
-            status.booking = booking
-            status.save()
-            booking.status = status.current_status
+            status_obj = form.save(commit=False)
+            status_obj.booking = booking
+            status_obj.save()
+            booking.status = status_obj.current_status
             booking.save()
             messages.success(request, "Service status updated successfully.")
             return redirect("view_bookings")
     else:
         form = ServiceStatusForm()
-    return render(request, "update_status.html", {"form": form})
+    return render(request, "update_status.html", {"form": form, "booking": booking})
 
 
 # ------------------------------------------------------------
-# 💰 6. INVOICE AND HISTORY
+# 6. INVOICE AND HISTORY
 # ------------------------------------------------------------
-
 @login_required
+@require_servicecenter
 def generate_invoice(request, booking_id):
     booking = get_object_or_404(ServiceBooking, id=booking_id)
+    if booking.service_center != request.user.servicecenter:
+        return HttpResponseForbidden("Not your booking.")
+
     if request.method == "POST":
         form = InvoiceForm(request.POST)
         if form.is_valid():
-            invoice = form.save(commit=False)
-            invoice.booking = booking
-            invoice.service_center = booking.service_center
-            invoice.save()
+            with transaction.atomic():
+                invoice = form.save(commit=False)
+                invoice.booking = booking
+                invoice.service_center = request.user.servicecenter
+                invoice.save()
+                booking.status = 'Completed'
+                booking.save()
             messages.success(request, "Invoice generated successfully.")
             return redirect("view_bookings")
     else:
-        form = InvoiceForm(initial={"booking": booking})
-    return render(request, "invoice.html", {"form": form})
+        form = InvoiceForm()
+    return render(request, "invoice.html", {"form": form, "booking": booking})
 
 
 @login_required
 def view_history(request):
-    """View service history for customers"""
     if hasattr(request.user, "customer"):
-        histories = ServiceHistory.objects.filter(customer=request.user.customer)
+        histories = ServiceHistory.objects.filter(customer=request.user.customer).order_by('-service_date')
         return render(request, "history_list.html", {"histories": histories})
     else:
         messages.error(request, "Access denied.")
-        return redirect("dashboard")
-
-
-# ------------------------------------------------------------
-# 📩 7. REMINDERS & OFFERS
-# ------------------------------------------------------------
-
-@login_required
-def reminder_offer(request):
-    """Service center sends reminder or offer"""
-    if hasattr(request.user, "servicecenter"):
-        if request.method == "POST":
-            form = ReminderOfferForm(request.POST)
-            if form.is_valid():
-                reminder = form.save(commit=False)
-                reminder.service_center = request.user.servicecenter
-                reminder.save()
-                messages.success(request, "Reminder/Offer sent successfully.")
-                return redirect("view_bookings")
-        else:
-            form = ReminderOfferForm()
-        return render(request, "reminder_offer.html", {"form": form})
-    else:
-        messages.error(request, "Access denied.")
-        return redirect("dashboard")
+        return redirect("home")
 
 
 @login_required
-def record_history(request):
-    """Record service history after completion"""
+def record_history(request, booking_id=None):
+    """
+    Record service history after completion.
+    booking_id optional — if present, ensure the booking belongs to the user or service center.
+    """
     if request.method == "POST":
         form = ServiceHistoryForm(request.POST)
         if form.is_valid():
             history = form.save(commit=False)
-            # Automatically assign customer and service center if available
-            if hasattr(request.user, "customer"):
+            # assign customer/service_center based on current user or booking
+            if hasattr(request.user, 'customer'):
                 history.customer = request.user.customer
-            elif hasattr(request.user, "servicecenter"):
+                # if booking provided ensure it matches
+                if history.booking and history.booking.customer != request.user.customer:
+                    messages.error(request, "Booking mismatch.")
+                    return redirect("view_history")
+            elif hasattr(request.user, 'servicecenter'):
                 history.service_center = request.user.servicecenter
+                if history.booking and history.booking.service_center != request.user.servicecenter:
+                    messages.error(request, "Booking mismatch.")
+                    return redirect("servicecenter_dashboard")
             history.save()
             messages.success(request, "Service history recorded successfully.")
             return redirect("view_history")
